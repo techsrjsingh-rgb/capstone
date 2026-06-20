@@ -1,21 +1,26 @@
 """
 app.py — Streamlit Dashboard for Fraud Detection AI Agent
 ==========================================================
-Run with:  streamlit run fraud_detection/app.py
+Run with:  streamlit run frontend/app.py
 """
 
-import sys, os, time
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import json
+import time
+from pathlib import Path
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
-from fraud_detection.data import SAMPLE_TRANSACTIONS
-from fraud_detection.rules import FraudDetectionRules
-from fraud_detection.agent import FraudDetectionOrchestrator
-from shared.config import config
+from core.data import SAMPLE_TRANSACTIONS
+from core.rules import FraudDetectionRules
+from core.graph import build_fraud_graph, get_graph_stats, to_cypher_export
+from orchestrator.agent import FraudDetectionOrchestrator
+from config.settings import config
+
+K6_REPORT = Path("reports/k6_summary.json")
 
 # ── Page config (must be first Streamlit call) ─────────────────────
 st.set_page_config(
@@ -254,9 +259,10 @@ st.markdown("""
 # ──────────────────────────────────────────────────────────────────
 # TABS
 # ──────────────────────────────────────────────────────────────────
-tab_batch, tab_single, tab_about = st.tabs(
-    ["📊 Batch Analysis", "🔎 Analyze Transaction", "ℹ️ About"]
-)
+tab_batch, tab_single, tab_load, tab_graph, tab_about = st.tabs([
+    "📊 Batch Analysis", "🔎 Analyze Transaction",
+    "⚡ Load Tests", "🕸️ Transaction Graph", "ℹ️ About",
+])
 
 # ══════════════════════════════════════════════════════════════════
 # TAB 1 — BATCH ANALYSIS
@@ -634,7 +640,309 @@ with tab_single:
 
 
 # ══════════════════════════════════════════════════════════════════
-# TAB 3 — ABOUT
+# TAB 3 — LOAD TESTS
+# ══════════════════════════════════════════════════════════════════
+with tab_load:
+    st.markdown('<div class="section-title">⚡ K6 Load Test Results</div>',
+                unsafe_allow_html=True)
+
+    if K6_REPORT.exists():
+        try:
+            k6_data = json.loads(K6_REPORT.read_text())
+            metrics = k6_data.get("metrics", {})
+            dur     = metrics.get("http_req_duration", {})
+
+            # ── Latency percentiles bar chart ─────────────────────
+            p_vals = {
+                "P50 (Median)": dur.get("med", 0),
+                "P90":          dur.get("p(90)", dur.get("p90", 0)),
+                "P95":          dur.get("p(95)", dur.get("p95", 0)),
+                "P99":          dur.get("p(99)", dur.get("p99", 0)),
+            }
+            fig_lat = px.bar(
+                x=list(p_vals.keys()), y=list(p_vals.values()),
+                labels={"x": "Percentile", "y": "Latency (ms)"},
+                title="Response Latency Percentiles",
+                color=list(p_vals.values()),
+                color_continuous_scale=["#00e676", "#ffd600", "#ff1744"],
+            )
+            fig_lat.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(13,27,42,0.6)",
+                font_color="#c8d8e8",
+                coloraxis_showscale=False,
+                margin=dict(t=40, b=10, l=10, r=10),
+            )
+
+            # ── Error rate gauge ──────────────────────────────────
+            error_rate = metrics.get("http_req_failed", {}).get("rate", 0)
+            fig_err = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=round(error_rate * 100, 2),
+                number={"suffix": "%", "font": {"color": "#c8d8e8"}},
+                title={"text": "Error Rate", "font": {"color": "#c8d8e8", "size": 14}},
+                gauge={
+                    "axis": {"range": [0, 20], "tickcolor": "#c8d8e8",
+                             "tickfont": {"color": "#c8d8e8"}},
+                    "bar": {"color": "#448aff"},
+                    "bgcolor": "rgba(0,0,0,0)",
+                    "steps": [
+                        {"range": [0, 5],  "color": "rgba(0,230,118,0.2)"},
+                        {"range": [5, 10], "color": "rgba(255,214,0,0.2)"},
+                        {"range": [10, 20],"color": "rgba(255,23,68,0.2)"},
+                    ],
+                    "threshold": {"line": {"color": "#ff1744", "width": 3},
+                                  "thickness": 0.75, "value": 5},
+                },
+            ))
+            fig_err.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                height=220,
+                margin=dict(t=40, b=10, l=20, r=20),
+            )
+
+            rps       = metrics.get("http_reqs", {}).get("rate", 0)
+            total_req = int(metrics.get("http_reqs", {}).get("count", 0))
+            avg_ms    = round(dur.get("avg", 0), 1)
+
+            # Metric cards row
+            st.markdown("<br>", unsafe_allow_html=True)
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1.markdown(_metric_card("Total Requests", f"{total_req:,}", "total"),
+                         unsafe_allow_html=True)
+            mc2.markdown(_metric_card("Req / sec", f"{rps:.1f}", "total"),
+                         unsafe_allow_html=True)
+            mc3.markdown(_metric_card("Avg Latency", f"{avg_ms} ms", "total"),
+                         unsafe_allow_html=True)
+            mc4.markdown(_metric_card("Error Rate", f"{error_rate*100:.2f}%",
+                         "high" if error_rate > 0.05 else "safe"),
+                         unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            lc, rc = st.columns(2)
+            with lc:
+                st.plotly_chart(fig_lat, use_container_width=True)
+            with rc:
+                st.plotly_chart(fig_err, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Failed to parse K6 report: {e}")
+    else:
+        st.info("No K6 results yet. Start all 3 MCP servers, then run:")
+        st.code(
+            "k6 run load_tests/k6_script.js "
+            "--summary-export=reports/k6_summary.json",
+            language="bash",
+        )
+        st.markdown("Or for a quick smoke test only:")
+        st.code(
+            "k6 run --vus 1 --duration 30s load_tests/k6_script.js "
+            "--summary-export=reports/k6_summary.json",
+            language="bash",
+        )
+
+    with st.expander("📋 Test Scenarios"):
+        st.markdown("""
+| Scenario | VUs | Duration | Purpose |
+|----------|-----|----------|---------|
+| Smoke    | 1   | 30s      | Baseline check — verify server is responding |
+| Load     | 50  | 5 min    | Normal traffic — check P95 latency |
+| Stress   | 50→200 | 10 min | Find breaking point |
+
+**Targets:**
+- Fraud DB MCP (port 8002): `get_transaction_history`, `get_fraud_blacklist`, `get_fraud_statistics`
+- Geo Risk MCP (port 8003): `get_country_risk_score`, `verify_domestic_location`
+- Orchestrator MCP (port 8004): `get_system_status` *(not `analyze_transaction` — avoids API cost)*
+
+**Thresholds:** P95 latency < 2000 ms · Error rate < 10%
+""")
+
+    with st.expander("📦 Install K6"):
+        st.code("""# Debian/Ubuntu
+sudo gpg --no-default-keyring \\
+  --keyring /usr/share/keyrings/k6-archive-keyring.gpg \\
+  --keyserver hkp://keyserver.ubuntu.com:80 \\
+  --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \\
+  | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update && sudo apt-get install k6""", language="bash")
+
+
+# ══════════════════════════════════════════════════════════════════
+# TAB 4 — TRANSACTION GRAPH
+# ══════════════════════════════════════════════════════════════════
+with tab_graph:
+    st.markdown('<div class="section-title">🕸️ Transaction Relationship Graph</div>',
+                unsafe_allow_html=True)
+    st.markdown(
+        "Nodes: **🔵 Customer** · **🟢/🟡/🔴 Transaction** (by risk) · **🟣 Location**  "
+        "   Edges: MADE · AT_LOCATION · FOLLOWS (rapid succession)"
+    )
+
+    # Build graph — enrich with analysis results if batch has been run
+    batch_results = st.session_state.get("batch_results")
+    G = build_fraud_graph(SAMPLE_TRANSACTIONS, batch_results)
+    stats = get_graph_stats(G)
+
+    if not batch_results:
+        st.info("Run **Batch Analysis** (Tab 1) first to see risk colors on transaction nodes.")
+
+    # ── Stats cards ───────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    gs1, gs2, gs3, gs4 = st.columns(4)
+    gs1.markdown(_metric_card("Total Nodes", stats["total_nodes"], "total"),
+                 unsafe_allow_html=True)
+    gs2.markdown(_metric_card("Total Edges", stats["total_edges"], "total"),
+                 unsafe_allow_html=True)
+    gs3.markdown(_metric_card("High-Risk Txns", stats["high_risk_transactions"], "high"),
+                 unsafe_allow_html=True)
+    gs4.markdown(_metric_card("Fraud Clusters", stats["fraud_clusters"], "susp"),
+                 unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Filter controls ───────────────────────────────────────────
+    f1, f2, _ = st.columns([1, 1, 2])
+    risk_filter = f1.selectbox(
+        "Filter by Risk Level", ["All", "High Risk", "Suspicious", "Safe", "Unknown"],
+        key="graph_risk_filter",
+    )
+    all_customers = sorted({
+        d["customer_id"]
+        for _, d in G.nodes(data=True)
+        if d.get("type") == "customer"
+    })
+    cust_filter = f2.selectbox(
+        "Filter by Customer", ["All"] + all_customers,
+        key="graph_cust_filter",
+    )
+
+    # Determine which transaction nodes to include based on filters
+    include_txn_nodes: set = set()
+    for node_id, data in G.nodes(data=True):
+        if data.get("type") != "transaction":
+            continue
+        rl = data.get("risk_level") or "Unknown"
+        cust = data.get("customer_id", "")
+        if risk_filter != "All" and rl != risk_filter:
+            continue
+        if cust_filter != "All" and cust != cust_filter:
+            continue
+        include_txn_nodes.add(node_id)
+
+    # Build the subgraph: include matching transactions + their connected nodes
+    include_nodes: set = set(include_txn_nodes)
+    for node_id in include_txn_nodes:
+        for neighbor in list(G.predecessors(node_id)) + list(G.successors(node_id)):
+            include_nodes.add(neighbor)
+
+    subG = G.subgraph(include_nodes) if include_nodes else G
+
+    # ── pyvis interactive graph ───────────────────────────────────
+    try:
+        from pyvis.network import Network
+
+        COLOR_MAP = {
+            ("transaction", "High Risk"):    "#ff1744",
+            ("transaction", "Suspicious"):   "#ffd600",
+            ("transaction", "Safe"):         "#00e676",
+            ("transaction", None):           "#448aff",
+            ("customer",    None):           "#29b6f6",
+            ("location",    None):           "#ce93d8",
+        }
+
+        net = Network(
+            height="580px", width="100%",
+            bgcolor="#0d1b2a", font_color="#c8d8e8",
+            directed=True,
+        )
+        net.set_options("""
+        {
+          "physics": {
+            "stabilization": {"iterations": 150},
+            "barnesHut": {"gravitationalConstant": -8000, "springLength": 120}
+          },
+          "edges": {"arrows": {"to": {"enabled": true, "scaleFactor": 0.6}},
+                    "color": {"color": "#4a6080", "highlight": "#ffffff"},
+                    "font": {"color": "#8899aa", "size": 10}},
+          "nodes": {"font": {"size": 12}}
+        }
+        """)
+
+        for node_id, data in subG.nodes(data=True):
+            ntype = data.get("type", "unknown")
+            rl    = data.get("risk_level")
+            color = COLOR_MAP.get((ntype, rl), COLOR_MAP.get((ntype, None), "#888888"))
+            size  = 20 if ntype == "customer" else (16 if ntype == "transaction" else 12)
+            title_parts = [f"<b>{node_id}</b>"]
+            if ntype == "transaction":
+                title_parts += [
+                    f"Amount: ₹{data.get('amount', 0):,.0f}",
+                    f"Risk: {rl or 'Unknown'}",
+                    f"Score: {data.get('risk_score') or '—'}",
+                ]
+            elif ntype == "location":
+                title_parts += [
+                    f"Risk score: {data.get('risk_score', '—')}",
+                    f"Domestic: {data.get('is_domestic', False)}",
+                ]
+            net.add_node(
+                node_id,
+                label=data.get("label", node_id),
+                color=color,
+                size=size,
+                title="<br>".join(title_parts),
+            )
+
+        for src, dst, edata in subG.edges(data=True):
+            etype = edata.get("type", "")
+            width = 2 if etype == "FOLLOWS" else 1
+            net.add_edge(src, dst, label=etype, width=width)
+
+        html_str = net.generate_html()
+        components.html(html_str, height=600, scrolling=False)
+
+    except ImportError:
+        st.warning(
+            "pyvis is not installed. Run `pip install pyvis` then restart the app."
+        )
+        # Fallback: static table of nodes
+        node_rows = [
+            {"Node": nid, "Type": d.get("type"), "Risk": d.get("risk_level") or "—",
+             "Label": d.get("label", nid)}
+            for nid, d in subG.nodes(data=True)
+        ]
+        st.dataframe(pd.DataFrame(node_rows), use_container_width=True)
+
+    st.markdown("---")
+
+    # ── Graph statistics ──────────────────────────────────────────
+    with st.expander("📊 Graph Statistics"):
+        col_stat1, col_stat2 = st.columns(2)
+        with col_stat1:
+            st.markdown(f"""
+| Metric | Value |
+|--------|-------|
+| Customer nodes | {stats['customer_nodes']} |
+| Transaction nodes | {stats['transaction_nodes']} |
+| Location nodes | {stats['location_nodes']} |
+| High-risk transactions | {stats['high_risk_transactions']} |
+| Fraud clusters | {stats['fraud_clusters']} |
+""")
+        with col_stat2:
+            st.markdown("**Top 5 nodes by degree centrality:**")
+            for entry in stats["top5_by_centrality"]:
+                st.markdown(f"- `{entry['node']}` → {entry['centrality']:.4f}")
+
+    # ── Neo4j Cypher export ───────────────────────────────────────
+    with st.expander("🗄️ Export to Neo4j Cypher"):
+        st.markdown("Copy-paste into Neo4j Browser or `cypher-shell` to import the graph.")
+        cypher = to_cypher_export(G)
+        st.code(cypher, language="cypher")
+
+
+# ══════════════════════════════════════════════════════════════════
+# TAB 5 — ABOUT
 # ══════════════════════════════════════════════════════════════════
 with tab_about:
     st.markdown('<div class="section-title">About This System</div>', unsafe_allow_html=True)

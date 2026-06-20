@@ -3,7 +3,7 @@ MCP Server 1 – Fraud Transaction Database
 Provides tools related to transaction history and fraud blacklists.
 
 Run this server before starting the Streamlit app:
-  python fraud_detection/mcp_server_fraud.py
+  python mcp/mcp_server_fraud.py
 
 Tools exposed:
   get_transaction_history  – recent transactions for a customer
@@ -12,12 +12,8 @@ Tools exposed:
   get_fraud_statistics     – summary stats for the fraud database
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from mcp.server.fastmcp import FastMCP
-from shared.config import config
+from config.settings import config
 
 # Create the FastMCP application — "fraud-db" is the server name
 app = FastMCP("fraud-db", port=config.FRAUD_MCP_PORT)

@@ -1,0 +1,257 @@
+{
+    "metrics": {
+        "http_req_sending": {
+            "min": 0.032981,
+            "med": 0.077416,
+            "max": 3.562527,
+            "p(90)": 0.1175236,
+            "p(95)": 0.13924020000000004,
+            "avg": 0.10545132597623087
+        },
+        "orchestrator_rt": {
+            "med": 0.795193,
+            "max": 8.253945,
+            "p(90)": 0.9553032,
+            "p(95)": 1.1413249999999993,
+            "avg": 0.9458956140350876,
+            "min": 0.489448
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(90)": 1.0259876000000006,
+            "p(95)": 1.2643922000000003,
+            "avg": 0.8269500577249573,
+            "min": 0.382971,
+            "med": 0.672441,
+            "max": 9.554847
+        },
+        "checks": {
+            "passes": 720,
+            "fails": 0,
+            "value": 1
+        },
+        "data_sent": {
+            "count": 102174,
+            "rate": 3287.169876384261
+        },
+        "custom_errors": {
+            "passes": 0,
+            "fails": 589,
+            "thresholds": {
+                "rate<0.10": false
+            },
+            "value": 0
+        },
+        "http_reqs": {
+            "count": 589,
+            "rate": 18.94946911337845
+        },
+        "http_req_blocked": {
+            "p(90)": 0.4335216,
+            "p(95)": 0.4993554000000001,
+            "avg": 5.665856005093375,
+            "min": 0.008423,
+            "med": 0.292056,
+            "max": 1050.075771
+        },
+        "iterations": {
+            "count": 240,
+            "rate": 7.721345648914818
+        },
+        "vus_max": {
+            "value": 10,
+            "min": 10,
+            "max": 10
+        },
+        "geo_rt": {
+            "avg": 0.8588638130841114,
+            "min": 0.396117,
+            "med": 0.66174,
+            "max": 9.554847,
+            "p(90)": 0.8889673,
+            "p(95)": 1.2265216999999986
+        },
+        "streamlit_rt": {
+            "med": 1.113015,
+            "max": 2.541424,
+            "p(90)": 1.2971496,
+            "p(95)": 1.3606398,
+            "avg": 1.1707752758620693,
+            "min": 0.919655
+        },
+        "http_req_duration": {
+            "avg": 0.8269500577249573,
+            "min": 0.382971,
+            "med": 0.672441,
+            "max": 9.554847,
+            "p(90)": 1.0259876000000006,
+            "p(95)": 1.2643922000000003,
+            "thresholds": {
+                "p(95)<3000": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0
+        },
+        "http_req_receiving": {
+            "avg": 0.13041527504244493,
+            "min": 0.051265,
+            "med": 0.116364,
+            "max": 2.231956,
+            "p(90)": 0.17158820000000005,
+            "p(95)": 0.19920160000000006
+        },
+        "data_received": {
+            "count": 214192,
+            "rate": 6891.043613468178
+        },
+        "vus": {
+            "max": 10,
+            "value": 1,
+            "min": 1
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 589,
+            "thresholds": {
+                "rate<0.15": false
+            },
+            "value": 0
+        },
+        "http_req_waiting": {
+            "p(95)": 1.0029894000000001,
+            "avg": 0.5910834567062813,
+            "min": 0.253136,
+            "med": 0.465663,
+            "max": 8.127274,
+            "p(90)": 0.7586328000000006
+        },
+        "fraud_db_rt": {
+            "med": 0.6285970000000001,
+            "max": 8.320911,
+            "p(90)": 0.8976831000000001,
+            "p(95)": 1.0521534499999998,
+            "avg": 0.7628901325757574,
+            "min": 0.382971
+        },
+        "http_req_connecting": {
+            "med": 0.183665,
+            "max": 1049.979548,
+            "p(90)": 0.2979852,
+            "p(95)": 0.343186,
+            "avg": 5.556607093378606,
+            "min": 0
+        },
+        "iteration_duration": {
+            "med": 1271.3608205,
+            "max": 2977.508977,
+            "p(90)": 1889.7376141,
+            "p(95)": 1940.9049334499998,
+            "avg": 1274.3268352874998,
+            "min": 506.263254
+        }
+    },
+    "root_group": {
+        "checks": {
+            "geo_risk_score 200": {
+                "id": "9296ee36ae16366d4003cb55ebf5154b",
+                "passes": 80,
+                "fails": 0,
+                "name": "geo_risk_score 200",
+                "path": "::geo_risk_score 200"
+            },
+            "dashboard_health 200": {
+                "fails": 0,
+                "name": "dashboard_health 200",
+                "path": "::dashboard_health 200",
+                "id": "eebbc805f0c89a0a1e25f2bc241b3feb",
+                "passes": 29
+            },
+            "fraud_history 200": {
+                "name": "fraud_history 200",
+                "path": "::fraud_history 200",
+                "id": "41a2dbc21808dc9a6ab42282c9b8f8df",
+                "passes": 88,
+                "fails": 0
+            },
+            "fraud_history body": {
+                "name": "fraud_history body",
+                "path": "::fraud_history body",
+                "id": "5bcf844a613d09e884d8faca3619f147",
+                "passes": 88,
+                "fails": 0
+            },
+            "orch_status 200": {
+                "name": "orch_status 200",
+                "path": "::orch_status 200",
+                "id": "307b7bcb9b2490c8013bd6b561892f3a",
+                "passes": 43,
+                "fails": 0
+            },
+            "orch_status healthy": {
+                "fails": 0,
+                "name": "orch_status healthy",
+                "path": "::orch_status healthy",
+                "id": "e0eeac7642682eb4df3ff14f42cb4ab3",
+                "passes": 43
+            },
+            "geo_domestic 200": {
+                "id": "a9499b8ad8c3d6a2661327c5a96ee2ba",
+                "passes": 80,
+                "fails": 0,
+                "name": "geo_domestic 200",
+                "path": "::geo_domestic 200"
+            },
+            "fraud_blacklist 200": {
+                "passes": 88,
+                "fails": 0,
+                "name": "fraud_blacklist 200",
+                "path": "::fraud_blacklist 200",
+                "id": "ea170cf5ae753fd5960f0f3417f79e59"
+            },
+            "fraud_stats 200": {
+                "name": "fraud_stats 200",
+                "path": "::fraud_stats 200",
+                "id": "40c749f627f06d58cabd35db5202fe22",
+                "passes": 88,
+                "fails": 0
+            },
+            "fraud_report 200": {
+                "path": "::fraud_report 200",
+                "id": "2dd2912a39ec5b91eda73f0d2add3836",
+                "passes": 25,
+                "fails": 0,
+                "name": "fraud_report 200"
+            },
+            "geo_high_risk 200": {
+                "fails": 0,
+                "name": "geo_high_risk 200",
+                "path": "::geo_high_risk 200",
+                "id": "0d87bdd39052a6aa204a50417f9b815c",
+                "passes": 33
+            },
+            "geo_ip 200": {
+                "fails": 0,
+                "name": "geo_ip 200",
+                "path": "::geo_ip 200",
+                "id": "4fa0fc1c326f0ca29aa90c585cd6b6ab",
+                "passes": 21
+            },
+            "orch_audit 200": {
+                "name": "orch_audit 200",
+                "path": "::orch_audit 200",
+                "id": "5cdc68d29022c4ba9c68549e8ac084e3",
+                "passes": 14,
+                "fails": 0
+            }
+        },
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {}
+    }
+}

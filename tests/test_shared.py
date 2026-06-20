@@ -13,15 +13,11 @@ Run with:
   pytest tests/test_shared.py -v
 """
 
-import sys
-import os
 import time
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from shared.governance import GovernanceManager, RateLimiter
-from shared.observability import ObservabilityManager
+from core.governance import GovernanceManager, RateLimiter
+from observability.observability import ObservabilityManager
 
 
 # ──────────────────────────────────────────────────────────────────

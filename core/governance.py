@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from .config import config
+from config.settings import config
 
 
 class GovernanceManager:

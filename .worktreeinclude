@@ -1,0 +1,14 @@
+config/
+core/
+frontend/
+mcp/
+observability/
+orchestrator/
+rag/
+tests/
+load_tests/
+docs/
+.claude/
+CLAUDE.md
+.mcp.json
+requirements.txt

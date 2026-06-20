@@ -11,16 +11,11 @@ Run with:
   pytest tests/test_rules.py -v
 """
 
-import sys
-import os
 import pytest
 
-# Allow importing from the project root
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from fraud_detection.rules import FraudDetectionRules, _parse_time
-from fraud_detection.data import SAMPLE_TRANSACTIONS
-from shared.config import config
+from core.rules import FraudDetectionRules, _parse_time
+from core.data import SAMPLE_TRANSACTIONS
+from config.settings import config
 
 
 @pytest.fixture

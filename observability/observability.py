@@ -5,6 +5,7 @@ Every agent call is assigned a unique correlation_id so the full chain
 of decisions (Rules → Pattern → Risk → Coordinator) can be traced end-to-end.
 """
 
+import os
 import uuid
 import json
 import logging
@@ -14,6 +15,20 @@ from typing import Any
 # Configure the root logger to output one JSON line per log event
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 _logger = logging.getLogger("fraud_agent")
+
+# OpenTelemetry — optional; system works without it if packages are absent
+# or OTEL_EXPORTER_OTLP_ENDPOINT is not set (in-memory-only mode).
+try:
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    _OTEL_AVAILABLE = True
+except ImportError:
+    _OTEL_AVAILABLE = False
 
 
 class ObservabilityManager:
@@ -27,6 +42,41 @@ class ObservabilityManager:
         self._traces: dict[str, list[dict]] = {}
         # metric_name → list of {value, tags, timestamp}
         self._metrics: dict[str, list[dict]] = {}
+
+        # OpenTelemetry setup — enabled only when endpoint env var is set
+        self._tracer = None
+        self._otel_meter = None
+        self._otel_enabled = False
+        _endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+        if _OTEL_AVAILABLE and _endpoint:
+            try:
+                provider = TracerProvider()
+                provider.add_span_processor(
+                    BatchSpanProcessor(OTLPSpanExporter(endpoint=_endpoint))
+                )
+                otel_trace.set_tracer_provider(provider)
+                self._tracer = otel_trace.get_tracer(
+                    os.getenv("OTEL_SERVICE_NAME", "fraud-detection")
+                )
+                reader = PeriodicExportingMetricReader(
+                    OTLPMetricExporter(endpoint=_endpoint)
+                )
+                meter_provider = MeterProvider(metric_readers=[reader])
+                self._otel_meter = meter_provider.get_meter(
+                    os.getenv("OTEL_SERVICE_NAME", "fraud-detection")
+                )
+                self._otel_enabled = True
+                _logger.info(json.dumps({
+                    "type": "otel_init",
+                    "status": "enabled",
+                    "endpoint": _endpoint,
+                }))
+            except Exception as e:
+                _logger.warning(json.dumps({
+                    "type": "otel_init",
+                    "status": "failed",
+                    "error": str(e),
+                }))
 
     # ──────────────────────────────────────────────────────────────
     # Correlation ID – one per transaction / batch
@@ -63,6 +113,16 @@ class ObservabilityManager:
         self._traces.setdefault(correlation_id, []).append(event)
         _logger.info(json.dumps(event))
 
+        # Ship span to OTEL backend if configured
+        if self._otel_enabled and self._tracer:
+            try:
+                with self._tracer.start_as_current_span(agent_name) as span:
+                    span.set_attribute("correlation_id", correlation_id)
+                    span.set_attribute("agent.name", agent_name)
+                    span.set_attribute("duration_ms", round(duration_ms, 2))
+            except Exception:
+                pass  # never let OTEL errors crash the pipeline
+
     def log_decision(
         self,
         correlation_id: str,
@@ -98,6 +158,17 @@ class ObservabilityManager:
         }
         self._metrics.setdefault(metric_name, []).append(entry)
         _logger.info(json.dumps({"type": "metric", **entry}))
+
+        # Forward metric to OTEL backend if configured
+        if self._otel_enabled and self._otel_meter:
+            try:
+                counter = self._otel_meter.create_counter(
+                    metric_name,
+                    description=f"Fraud detection metric: {metric_name}",
+                )
+                counter.add(int(max(0, value)), attributes=tags or {})
+            except Exception:
+                pass  # never let OTEL errors crash the pipeline
 
     def get_metrics_summary(self) -> dict:
         """Return count/avg/min/max for every collected metric."""

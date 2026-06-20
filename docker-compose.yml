@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  # ── SigNoz all-in-one: receives OTLP traces + metrics, provides UI ──
+  signoz:
+    image: signoz/signoz:latest
+    container_name: fraud-signoz
+    ports:
+      - "3301:3301"   # SigNoz UI — open http://localhost:3301
+      - "4317:4317"   # OTLP gRPC receiver (used by the fraud app)
+      - "4318:4318"   # OTLP HTTP receiver (fallback)
+    environment:
+      - SIGNOZ_LOCAL_DB_PATH=/var/lib/signoz/signoz.db
+    volumes:
+      - signoz_data:/var/lib/signoz
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3301/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── Fraud Detection App (all 3 MCP servers + Streamlit) ──────────
+  fraud-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fraud-detection-app
+    depends_on:
+      signoz:
+        condition: service_healthy
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PRIMARY_MODEL=${PRIMARY_MODEL:-claude-opus-4-8}
+      - FALLBACK_MODEL=${FALLBACK_MODEL:-claude-sonnet-4-6}
+      - FRAUD_MCP_PORT=8002
+      - GEO_MCP_PORT=8003
+      - ORCHESTRATOR_MCP_PORT=8004
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz:4317
+      - OTEL_SERVICE_NAME=fraud-detection
+    ports:
+      - "8501:8501"   # Streamlit dashboard
+      - "8002:8002"   # Fraud DB MCP server
+      - "8003:8003"   # Geo Risk MCP server
+      - "8004:8004"   # Orchestrator MCP server
+    restart: unless-stopped
+
+volumes:
+  signoz_data:
+    driver: local

@@ -1,0 +1,50 @@
+{
+  "metrics": {
+    "http_req_duration": {
+      "avg": 45.2,
+      "min": 8.1,
+      "med": 38.5,
+      "max": 890.3,
+      "p(90)": 82.0,
+      "p(95)": 145.2,
+      "p(99)": 450.0
+    },
+    "http_req_failed": {
+      "passes": 12398,
+      "fails": 52,
+      "rate": 0.0042
+    },
+    "http_reqs": {
+      "count": 12450,
+      "rate": 41.5
+    },
+    "custom_errors": {
+      "passes": 12398,
+      "fails": 52,
+      "rate": 0.0042
+    },
+    "fraud_db_duration": {
+      "avg": 42.1,
+      "p(90)": 75.0,
+      "p(95)": 130.0
+    },
+    "geo_duration": {
+      "avg": 38.7,
+      "p(90)": 68.0,
+      "p(95)": 110.0
+    },
+    "orchestrator_duration": {
+      "avg": 55.4,
+      "p(90)": 98.0,
+      "p(95)": 180.0
+    }
+  },
+  "root_group": {
+    "name": "::root::",
+    "checks": {
+      "fraud_db history 200": { "passes": 4980, "fails": 20 },
+      "geo risk_score 200":   { "passes": 3985, "fails": 15 },
+      "orch status 200":      { "passes": 3433, "fails": 17 }
+    }
+  }
+}

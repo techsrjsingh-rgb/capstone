@@ -27,6 +27,7 @@ class Config:
     # ── MCP server ports ───────────────────────────────────────────
     FRAUD_MCP_PORT: int = int(os.getenv("FRAUD_MCP_PORT", "8002"))
     GEO_MCP_PORT: int = int(os.getenv("GEO_MCP_PORT", "8003"))
+    ORCHESTRATOR_MCP_PORT: int = int(os.getenv("ORCHESTRATOR_MCP_PORT", "8004"))
 
     # ── Fraud detection thresholds ─────────────────────────────────
     HIGH_AMOUNT_THRESHOLD: float = 100000.0   # ₹1,00,000

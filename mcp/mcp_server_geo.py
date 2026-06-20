@@ -3,7 +3,7 @@ MCP Server 2 – Geolocation & Country Risk Data
 Provides geographic context for fraud analysis.
 
 Run this server before starting the Streamlit app:
-  python fraud_detection/mcp_server_geo.py
+  python mcp/mcp_server_geo.py
 
 Tools exposed:
   get_country_risk_score    – risk level for a given country
@@ -12,12 +12,8 @@ Tools exposed:
   verify_domestic_location  – confirm if a location is within India
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from mcp.server.fastmcp import FastMCP
-from shared.config import config
+from config.settings import config
 
 app = FastMCP("geo-risk-db", port=config.GEO_MCP_PORT)
 

@@ -21,13 +21,9 @@ How classification works:
   2+ rules triggered → HIGH RISK
 """
 
-import sys
-import os
 from datetime import datetime   # used to compare transaction times
 
-# Add parent folder to path so we can import from the 'shared' folder
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from shared.config import config   # loads thresholds like ₹1,00,000 from config.py
+from config.settings import config   # loads thresholds like ₹1,00,000 from config.py
 
 
 class FraudDetectionRules:

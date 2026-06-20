@@ -7,12 +7,8 @@ Hooks wrap every agent invocation to ensure:
   on_error     – safe fallback, error logging (never crash the pipeline)
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from shared.governance import governance, rate_limiter
-from shared.observability import observability
+from core.governance import governance, rate_limiter
+from observability.observability import observability
 
 
 class FraudHookManager:

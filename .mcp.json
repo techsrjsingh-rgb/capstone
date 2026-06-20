@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "fraud-db": {
+      "command": "python",
+      "args": ["mcp/mcp_server_fraud.py"],
+      "description": "Fraud transaction database — history, blacklist, statistics"
+    },
+    "geo-risk": {
+      "command": "python",
+      "args": ["mcp/mcp_server_geo.py"],
+      "description": "Geolocation and country risk data"
+    },
+    "fraud-orchestrator": {
+      "command": "python",
+      "args": ["mcp/mcp_server_orchestrator.py"],
+      "description": "Full 4-agent fraud detection pipeline — analyze transactions via MCP"
+    }
+  }
+}

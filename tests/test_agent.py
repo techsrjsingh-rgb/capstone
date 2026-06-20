@@ -12,17 +12,13 @@ Run with:
   pytest tests/test_agent.py -v
 """
 
-import sys
-import os
 import json
 import pytest
 from unittest.mock import MagicMock, patch
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from fraud_detection.agent import FraudDetectionOrchestrator, _compute_risk_score, _recommend_action
-from fraud_detection.hooks import FraudHookManager
-from fraud_detection.data import SAMPLE_TRANSACTIONS
+from orchestrator.agent import FraudDetectionOrchestrator, _compute_risk_score, _recommend_action
+from core.hooks import FraudHookManager
+from core.data import SAMPLE_TRANSACTIONS
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -171,7 +167,7 @@ class TestOrchestrator:
         rules_result = orchestrator._run_rules_agent(txn, SAMPLE_TRANSACTIONS)
         assert rules_result["risk_level"] in ("Suspicious", "High Risk")
 
-    @patch("fraud_detection.agent.anthropic.Anthropic")
+    @patch("orchestrator.agent.anthropic.Anthropic")
     def test_full_pipeline_with_mocked_llm(self, mock_anthropic_class, orchestrator):
         """
         Full analyze() call with mocked LLM responses.
@@ -193,7 +189,7 @@ class TestOrchestrator:
         assert "agent_trace"   in result
         assert "correlation_id" in result
 
-    @patch("fraud_detection.agent.anthropic.Anthropic")
+    @patch("orchestrator.agent.anthropic.Anthropic")
     def test_error_in_llm_triggers_fallback(self, mock_anthropic_class, orchestrator):
         """
         When the LLM raises an APIError, the on_error hook

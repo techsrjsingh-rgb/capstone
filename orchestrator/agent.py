@@ -28,28 +28,23 @@ Self-healing:
 
 import time      # for sleep() in retry logic
 import json      # for converting Python dicts ↔ JSON strings
-import sys
-import os
 from pathlib import Path   # for finding the skills file
 
 import anthropic   # the Anthropic Python SDK — talks to Claude
 
-# Add parent folder to path so Python can find the 'shared' folder
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from shared.config import config            # model names, thresholds
-from shared.observability import observability  # logging and tracing
-from shared.governance import governance    # compliance and audit
-from .rules import FraudDetectionRules      # the 4 Python fraud rules
-from .tools import (
+from config.settings import config                      # model names, thresholds
+from observability.observability import observability   # logging and tracing
+from core.governance import governance                  # compliance and audit
+from core.rules import FraudDetectionRules              # the 4 Python fraud rules
+from core.tools import (
     ANALYZE_TRANSACTION_TOOL,
     CHECK_CUSTOMER_HISTORY_TOOL,
     CALCULATE_FRAUD_SCORE_TOOL,
     GENERATE_FRAUD_REPORT_TOOL,
     ALL_TOOLS,
 )
-from .hooks import FraudHookManager         # pre/post middleware
-from .data import SAMPLE_TRANSACTIONS       # 22 test transactions
+from core.hooks import FraudHookManager                 # pre/post middleware
+from core.data import SAMPLE_TRANSACTIONS               # 22 test transactions
 
 # ── Load the skill file as the agent's system prompt ──────────────
 # The skill file (fraud_detection.md) tells each Claude agent what it is,
